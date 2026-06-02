@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Dance Promo</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="game">
+    <!-- HUD -->
+    <header id="hud">
+      <div id="score">Очки: 0</div>
+      <div id="combo" class="hidden"><span id="comboCount">0</span> COMBO</div>
+    </header>
+
+    <!-- Игровое поле -->
+    <div id="stage">
+      <canvas id="gameCanvas" width="480" height="480"></canvas>
+      <div id="dancer" data-mood="idle">🕺</div>
+      <div id="hitFeedback"></div>
+    </div>
+
+    <!-- Тач-кнопки (4 направления) -->
+    <div id="pad">
+      <button class="dirBtn" data-dir="up"    aria-label="вверх">▲</button>
+      <div class="padRow">
+        <button class="dirBtn" data-dir="left"  aria-label="влево">◀</button>
+        <button class="dirBtn" data-dir="down"  aria-label="вниз">▼</button>
+        <button class="dirBtn" data-dir="right" aria-label="вправо">▶</button>
+      </div>
+    </div>
+
+    <!-- Модалки / сюжет -->
+    <div id="overlay">
+      <div class="modal" id="startModal">
+        <h1>ТАНЦПОЛ ОТКРЫТ</h1>
+        <p class="story">Наш герой стоит у края танцпола. Толпа ждёт.
+          Покажи ему ритм — и он зажжёт. Лови стрелки, что летят к центру,
+          и жми в нужный момент. Чем длиннее комбо — тем круче он танцует.</p>
+        <button id="startBtn" class="bigBtn">НАЧАТЬ</button>
+      </div>
+
+      <div class="modal hidden" id="endModal">
+        <h1 id="endTitle">ФИНАЛ</h1>
+        <p class="story" id="endStory"></p>
+        <div id="finalScore"></div>
+        <button id="againBtn" class="bigBtn">ЕЩЁ РАЗ</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
