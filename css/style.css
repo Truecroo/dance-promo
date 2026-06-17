@@ -105,20 +105,17 @@ html, body {
 #dancer {
   position: absolute;
   top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 58px;
-  line-height: 1;
+  width: 200px;
+  transform: translate(-50%, -52%);
   z-index: 3;
   pointer-events: none;
-  filter: drop-shadow(0 6px 12px rgba(0,0,0,.45));
+  filter: drop-shadow(0 8px 14px rgba(0,0,0,.5));
+  transition: filter .3s ease;
 }
-#dancer[data-mood="idle"]   { animation: sway 2.4s ease-in-out infinite; }
-#dancer[data-mood="warm"]   { animation: sway 1.4s ease-in-out infinite; }
-#dancer[data-mood="groove"] { animation: bounce .68s ease-in-out infinite; }
-#dancer[data-mood="fire"]   { animation: bounce .42s ease-in-out infinite; }
-#dancer[data-mood="star"]   { animation: spinDance .5s linear infinite; font-size: 70px;
-                              filter: drop-shadow(0 0 16px rgba(255,77,125,.7)); }
-#dancer[data-mood="miss"]   { animation: shake .3s ease; }
+#dancer img { width: 100%; height: auto; display: block; }
+#dancer[data-mood="fire"]  { filter: drop-shadow(0 0 14px rgba(255,120,60,.55)); }
+#dancer[data-mood="star"]  { filter: drop-shadow(0 0 22px rgba(255,77,125,.8)); }
+#dancer[data-mood="miss"]  { animation: shake .35s ease; }
 
 /* Центральный комбо-счётчик */
 #comboBox {

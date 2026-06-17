@@ -11,6 +11,7 @@ const el = {
   comboBox:   document.getElementById('comboBox'),
   comboCount: document.getElementById('comboCount'),
   dancer:     document.getElementById('dancer'),
+  dancerImg:  document.getElementById('dancerImg'),
   judgment:   document.getElementById('judgment'),
   floaters:   document.getElementById('floaters'),
   progressBar:document.getElementById('progressBar'),
@@ -27,6 +28,44 @@ const startDist = S / 2 + CONFIG.arrow.size;
 const PERFECT_WINDOW = 14; // |d-R| для «Perfect»
 
 let state, effects;
+
+// --- Спрайты танцора: предзагрузка кадров и анимация ---
+const dancerFrames = {};   // mood -> [Image, ...]
+let curMood = 'idle', frameIdx = 0, frameAcc = 0, lastDancerT = 0;
+
+function pad3(n) { return String(n).padStart(3, '0'); }
+function preloadDancer() {
+  const { basePath, sprites } = CONFIG.dancer;
+  for (const mood in sprites) {
+    dancerFrames[mood] = [];
+    for (let i = 1; i <= sprites[mood].frames; i++) {
+      const img = new Image();
+      img.src = `${basePath}/${mood}/dancer_${mood}_${pad3(i)}.png`;
+      dancerFrames[mood].push(img);
+    }
+  }
+}
+
+function setDancerMood(mood) {
+  if (mood === curMood) return;
+  curMood = mood;
+  frameIdx = 0; frameAcc = 0;
+  el.dancer.dataset.mood = mood;
+}
+
+function animateDancer(now) {
+  const dt = lastDancerT ? (now - lastDancerT) / 1000 : 0;
+  lastDancerT = now;
+  const frames = dancerFrames[curMood];
+  if (frames && frames.length) {
+    frameAcc += dt;
+    const spf = 1 / CONFIG.dancer.sprites[curMood].fps;
+    while (frameAcc >= spf) { frameAcc -= spf; frameIdx = (frameIdx + 1) % frames.length; }
+    const src = frames[frameIdx].src;
+    if (el.dancerImg.src !== src) el.dancerImg.src = src;
+  }
+  requestAnimationFrame(animateDancer);
+}
 
 function freshState() {
   return {
@@ -96,8 +135,8 @@ function registerMiss() {
   state.combo = 0;
   showJudgment('miss', 'МИМО');
   updateHud();
-  el.dancer.dataset.mood = 'miss';
-  setTimeout(() => { if (state.running) updateDancer(); }, 350);
+  setDancerMood('miss');
+  setTimeout(() => { if (state.running) updateDancer(); }, 400);
 }
 
 // --- HUD / танцор ---
@@ -119,8 +158,7 @@ function updateHud() {
 function updateDancer() {
   let mood = 'idle';
   for (const m of CONFIG.moods) if (state.combo >= m.combo) mood = m.mood;
-  el.dancer.dataset.mood = mood;
-  el.dancer.textContent = CONFIG.dancerSprite[mood];
+  setDancerMood(mood);
 }
 
 let judgeTimer;
@@ -319,4 +357,7 @@ document.querySelectorAll('.dirBtn').forEach(btn => {
   btn.addEventListener('mousedown', fire);
 });
 
+preloadDancer();
+updateDancer();
+requestAnimationFrame(animateDancer);
 render(0);

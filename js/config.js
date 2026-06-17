@@ -31,14 +31,17 @@ const CONFIG = {
     { combo: 40, mood: 'star'  },
   ],
 
-  // Плейсхолдер-эмодзи танцора по настроению (заменим на спрайты)
-  dancerSprite: {
-    idle:   '🧍',
-    warm:   '🕺',
-    groove: '💃',
-    fire:   '🔥',
-    star:   '🌟',
-    miss:   '😵',
+  // Спрайт-анимации танцора (halo pack). frames — число кадров, fps — скорость цикла.
+  dancer: {
+    basePath: 'assets/dancer',
+    sprites: {
+      idle:   { frames: 6,  fps: 6  },
+      warm:   { frames: 6,  fps: 9  },
+      groove: { frames: 8,  fps: 12 },
+      fire:   { frames: 8,  fps: 16 },
+      star:   { frames: 10, fps: 18 },
+      miss:   { frames: 4,  fps: 10 },
+    },
   },
 
   // Цвета стрелок по направлению (плейсхолдер вместо картинок)
