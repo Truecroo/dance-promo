@@ -2,7 +2,7 @@
 const CONFIG = {
   // Геометрия поля
   canvas: { size: 480 },
-  target: { radius: 74 },     // радиус центральной зоны попадания (в px)
+  target: { radius: 90 },     // радиус центральной зоны попадания (в px)
   arrow:  { size: 54, speed: 200 }, // px в секунду к центру
 
   // Тайминг спавна стрелок (мс между появлениями)
@@ -35,12 +35,12 @@ const CONFIG = {
   dancer: {
     basePath: 'assets/dancer',
     sprites: {
-      idle:   { frames: 6,  fps: 6  },
-      warm:   { frames: 6,  fps: 9  },
-      groove: { frames: 8,  fps: 12 },
-      fire:   { frames: 8,  fps: 16 },
-      star:   { frames: 10, fps: 18 },
-      miss:   { frames: 4,  fps: 10 },
+      idle:   { frames: 6,  fps: 3  },
+      warm:   { frames: 6,  fps: 4  },
+      groove: { frames: 8,  fps: 6  },
+      fire:   { frames: 8,  fps: 8  },
+      star:   { frames: 10, fps: 10 },
+      miss:   { frames: 4,  fps: 8  },
     },
   },
 

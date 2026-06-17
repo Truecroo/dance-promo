@@ -105,7 +105,7 @@ html, body {
 #dancer {
   position: absolute;
   top: 50%; left: 50%;
-  width: 200px;
+  width: 150px;
   transform: translate(-50%, -52%);
   z-index: 3;
   pointer-events: none;
