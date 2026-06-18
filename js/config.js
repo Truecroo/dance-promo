@@ -34,13 +34,15 @@ const CONFIG = {
   // Спрайт-анимации танцора (halo pack). frames — число кадров, fps — скорость цикла.
   dancer: {
     basePath: 'assets/dancer',
+    // w — ширина отображения (px). Подобрана так, чтобы рост персонажа был
+    // одинаковым во всех настроениях (кадры обрезаны под контент по-разному).
     sprites: {
-      idle:   { frames: 6,  fps: 3  },
-      warm:   { frames: 6,  fps: 4  },
-      groove: { frames: 8,  fps: 6  },
-      fire:   { frames: 8,  fps: 8  },
-      star:   { frames: 10, fps: 10 },
-      miss:   { frames: 4,  fps: 8  },
+      idle:   { frames: 6,  fps: 3,  w: 157 },
+      warm:   { frames: 6,  fps: 4,  w: 143 },
+      groove: { frames: 8,  fps: 6,  w: 158 },
+      fire:   { frames: 8,  fps: 8,  w: 162 },
+      star:   { frames: 10, fps: 10, w: 168 },
+      miss:   { frames: 4,  fps: 8,  w: 156 },
     },
   },
 

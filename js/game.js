@@ -51,6 +51,8 @@ function setDancerMood(mood) {
   curMood = mood;
   frameIdx = 0; frameAcc = 0;
   el.dancer.dataset.mood = mood;
+  const w = CONFIG.dancer.sprites[mood].w;
+  if (w) el.dancer.style.width = w + 'px';
 }
 
 function animateDancer(now) {

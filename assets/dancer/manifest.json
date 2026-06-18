@@ -1,101 +1,80 @@
 {
-  "asset": "halo_dancer",
-  "frame_order": "left-to-right, top row first, then bottom row",
-  "notes": [
-    "PNG frames have transparent backgrounds.",
-    "Each animation folder contains fixed-size frames for stable frame-by-frame playback.",
-    "A transparent atlas sheet is also included in every folder."
-  ],
-  "animations": {
-    "dancer_idle": {
-      "description": "idle / combo 0",
-      "frame_count": 6,
-      "grid": "3x2",
-      "sheet": "dancer_idle_sheet.png",
-      "frames": [
-        "dancer_idle_001.png",
-        "dancer_idle_002.png",
-        "dancer_idle_003.png",
-        "dancer_idle_004.png",
-        "dancer_idle_005.png",
-        "dancer_idle_006.png"
-      ]
-    },
-    "dancer_warm": {
-      "description": "warm / combo 1–7",
-      "frame_count": 6,
-      "grid": "3x2",
-      "sheet": "dancer_warm_sheet.png",
-      "frames": [
-        "dancer_warm_001.png",
-        "dancer_warm_002.png",
-        "dancer_warm_003.png",
-        "dancer_warm_004.png",
-        "dancer_warm_005.png",
-        "dancer_warm_006.png"
-      ]
-    },
-    "dancer_groove": {
-      "description": "groove / combo 8–19",
-      "frame_count": 8,
-      "grid": "4x2",
-      "sheet": "dancer_groove_sheet.png",
-      "frames": [
-        "dancer_groove_001.png",
-        "dancer_groove_002.png",
-        "dancer_groove_003.png",
-        "dancer_groove_004.png",
-        "dancer_groove_005.png",
-        "dancer_groove_006.png",
-        "dancer_groove_007.png",
-        "dancer_groove_008.png"
-      ]
-    },
-    "dancer_fire": {
-      "description": "fire / combo 20–39",
-      "frame_count": 8,
-      "grid": "4x2",
-      "sheet": "dancer_fire_sheet.png",
-      "frames": [
-        "dancer_fire_001.png",
-        "dancer_fire_002.png",
-        "dancer_fire_003.png",
-        "dancer_fire_004.png",
-        "dancer_fire_005.png",
-        "dancer_fire_006.png",
-        "dancer_fire_007.png",
-        "dancer_fire_008.png"
-      ]
-    },
-    "dancer_star": {
-      "description": "star / combo 40+",
-      "frame_count": 10,
-      "grid": "5x2",
-      "sheet": "dancer_star_sheet.png",
-      "frames": [
-        "dancer_star_001.png",
-        "dancer_star_002.png",
-        "dancer_star_003.png",
-        "dancer_star_004.png",
-        "dancer_star_005.png",
-        "dancer_star_006.png",
-        "dancer_star_007.png",
-        "dancer_star_008.png",
-        "dancer_star_009.png",
-        "dancer_star_010.png"
-      ]
-    },
-    "dancer_miss": {
-      "description": "miss",
-      "frame_count": 4,
-      "grid": "2x2",
-      "sheet": "dancer_miss_sheet.png",
-      "frames": [
-        "dancer_miss_001.png",
-        "dancer_miss_002.png",
-        "dancer_miss_003.png",
-        "dancer_miss_004.png"
-      ]
-    }
+  "dancer_idle": {
+    "source": "лист_с_позами_персонажа_в_уличном_стиле.png",
+    "frames": 6,
+    "files": [
+      "dancer_idle_001.png",
+      "dancer_idle_002.png",
+      "dancer_idle_003.png",
+      "dancer_idle_004.png",
+      "dancer_idle_005.png",
+      "dancer_idle_006.png"
+    ]
+  },
+  "dancer_warm": {
+    "source": "характер_в_танцевальных_позах.png",
+    "frames": 6,
+    "files": [
+      "dancer_warm_001.png",
+      "dancer_warm_002.png",
+      "dancer_warm_003.png",
+      "dancer_warm_004.png",
+      "dancer_warm_005.png",
+      "dancer_warm_006.png"
+    ]
+  },
+  "dancer_groove": {
+    "source": "скетч_танцующего_маскота_в_позах.png",
+    "frames": 8,
+    "files": [
+      "dancer_groove_001.png",
+      "dancer_groove_002.png",
+      "dancer_groove_003.png",
+      "dancer_groove_004.png",
+      "dancer_groove_005.png",
+      "dancer_groove_006.png",
+      "dancer_groove_007.png",
+      "dancer_groove_008.png"
+    ]
+  },
+  "dancer_fire": {
+    "source": "глитч_танцующий_инопланетянин_в_стиле_пиксель_арт.png",
+    "frames": 8,
+    "files": [
+      "dancer_fire_001.png",
+      "dancer_fire_002.png",
+      "dancer_fire_003.png",
+      "dancer_fire_004.png",
+      "dancer_fire_005.png",
+      "dancer_fire_006.png",
+      "dancer_fire_007.png",
+      "dancer_fire_008.png"
+    ]
+  },
+  "dancer_star": {
+    "source": "динамичные_позы_мультперсонажа_на_фоне_прозрачност.png",
+    "frames": 10,
+    "files": [
+      "dancer_star_001.png",
+      "dancer_star_002.png",
+      "dancer_star_003.png",
+      "dancer_star_004.png",
+      "dancer_star_005.png",
+      "dancer_star_006.png",
+      "dancer_star_007.png",
+      "dancer_star_008.png",
+      "dancer_star_009.png",
+      "dancer_star_010.png"
+    ]
+  },
+  "dancer_miss": {
+    "source": "молодой_танцор_в_уличном_стиле.png",
+    "frames": 4,
+    "files": [
+      "dancer_miss_001.png",
+      "dancer_miss_002.png",
+      "dancer_miss_003.png",
+      "dancer_miss_004.png"
+    ]
   }
 }
