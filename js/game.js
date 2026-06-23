@@ -15,6 +15,8 @@ const el = {
   judgment:   document.getElementById('judgment'),
   floaters:   document.getElementById('floaters'),
   progressBar:document.getElementById('progressBar'),
+  energyBar:  document.getElementById('energyBar'),
+  tutHint:    document.getElementById('tutHint'),
   overlay:    document.getElementById('overlay'),
   endTitle:   document.getElementById('endTitle'),
   endStory:   document.getElementById('endStory'),
@@ -90,17 +92,35 @@ function freshState() {
   return {
     running: false, score: 0, combo: 0, maxCombo: 0,
     hits: 0, perfects: 0, misses: 0,
-    arrows: [], spawnInterval: CONFIG.spawn.start,
-    lastSpawn: 0, startTime: 0, lastFrame: 0, pausedMs: 0,
+    energy: CONFIG.energy.start, failed: false,
+    arrows: [], startTime: 0, lastFrame: 0,
+    nextHalfBeat: 0, halfBeatIdx: 0,
   };
 }
 state = freshState();
 effects = { pulses: [], particles: [], shake: 0 };
 
 // --- Спавн ---
-function spawnArrow() {
-  const dir = DIRS[Math.floor(Math.random() * DIRS.length)];
+function spawnArrow(exclude) {
+  let dir;
+  do { dir = DIRS[Math.floor(Math.random() * DIRS.length)]; } while (dir === exclude);
   state.arrows.push({ dir, d: startDist, hit: false, dead: false });
+  return dir;
+}
+
+// Обработка полубита: звук + спавн по плотности текущей фазы трека
+function onHalfBeat(idx, now) {
+  const downbeat = idx % 2 === 0;
+  if (downbeat) Sound.kick(); else Sound.hat();
+
+  const frac = (now - state.startTime) / CONFIG.trackDuration;
+  const phase = CONFIG.beat.phases.find(p => frac < p.until) || CONFIG.beat.phases[CONFIG.beat.phases.length - 1];
+
+  if (idx % phase.everyHalfBeats === 0) {
+    const d = spawnArrow();
+    // финальная фаза — иногда вторая стрелка с другой стороны
+    if (phase.doubles && Math.random() < 0.35) spawnArrow(d);
+  }
 }
 
 function arrowPos(a) {
@@ -149,6 +169,8 @@ function registerHit(arrow, err) {
 
   if (state.combo > 1 && state.combo % 10 === 0) effects.shake = 8; // тряска на круглых комбо
 
+  addEnergy(perfect ? CONFIG.energy.perfectGain : CONFIG.energy.hitGain);
+  Sound[perfect ? 'perfect' : 'hit']();
   updateHud();
   updateDancer();
 }
@@ -157,9 +179,26 @@ function registerMiss() {
   state.combo = 0;
   state.misses += 1;
   showJudgment('miss', 'МИМО');
+  addEnergy(-CONFIG.energy.missCost);
+  Sound.miss();
   updateHud();
   setDancerMood('miss');
   setTimeout(() => { if (state.running) updateDancer(); }, 400);
+}
+
+// --- Энергия ---
+function addEnergy(delta) {
+  state.energy = Math.max(0, Math.min(CONFIG.energy.max, state.energy + delta));
+  updateEnergyBar();
+  if (state.energy <= 0 && state.running && !state.failed) {
+    state.failed = true;
+    endGame();
+  }
+}
+function updateEnergyBar() {
+  const pct = state.energy / CONFIG.energy.max * 100;
+  el.energyBar.style.width = pct + '%';
+  el.energyBar.classList.toggle('low', pct <= 30);
 }
 
 // --- HUD / танцор ---
@@ -318,10 +357,12 @@ function loop(now) {
   const dt = Math.min(0.05, (now - state.lastFrame) / 1000);
   state.lastFrame = now;
 
-  if (now - state.lastSpawn >= state.spawnInterval) {
-    spawnArrow();
-    state.lastSpawn = now;
-    state.spawnInterval = Math.max(CONFIG.spawn.min, state.spawnInterval * CONFIG.spawn.ramp);
+  // бит-планировщик: полубитами
+  const halfBeatMs = 30000 / CONFIG.beat.bpm;
+  while (now >= state.nextHalfBeat) {
+    onHalfBeat(state.halfBeatIdx, now);
+    state.halfBeatIdx++;
+    state.nextHalfBeat += halfBeatMs;
   }
 
   const R = CONFIG.target.radius;
@@ -379,13 +420,27 @@ function beginRound() {
   el.floaters.innerHTML = '';
   el.progressBar.style.width = '0%';
   state.combo = 0; updateHud(); updateDancer();
+  updateEnergyBar();
   el.pauseBtn.textContent = '⏸';
+  Sound.ensure(); Sound.setMuted(muted);
+  maybeShowTutorial();
   runCountdown(() => {
     state.running = true;
     const t = performance.now();
-    state.lastSpawn = t; state.startTime = t; state.lastFrame = t;
+    state.startTime = t; state.lastFrame = t;
+    state.nextHalfBeat = t; state.halfBeatIdx = 0;
     requestAnimationFrame(loop);
   });
+}
+
+// Подсказка на первой игре (один раз на устройство)
+function maybeShowTutorial() {
+  if (localStorage.getItem('dancePromo.seenTutorial')) return;
+  el.tutHint.classList.remove('hidden');
+  el.tutHint.classList.add('show');
+  setTimeout(() => el.tutHint.classList.remove('show'), 4500);
+  setTimeout(() => el.tutHint.classList.add('hidden'), 5000);
+  try { localStorage.setItem('dancePromo.seenTutorial', '1'); } catch {}
 }
 
 function runCountdown(done) {
@@ -425,8 +480,10 @@ function endGame() {
     score: state.score, maxCombo: state.maxCombo, accuracy,
   });
 
-  el.endTitle.textContent = e.title;
-  el.endStory.textContent = e.story;
+  el.endTitle.textContent = state.failed ? 'Энергия кончилась' : e.title;
+  el.endStory.textContent = state.failed
+    ? 'Толпа выдохлась раньше времени. Лови ритм точнее — и держи комбо!'
+    : e.story;
   el.resultStats.innerHTML = `
     <div class="stat"><b>${state.score}</b><span>очки</span></div>
     <div class="stat"><b>${state.maxCombo}</b><span>макс. комбо</span></div>
@@ -444,7 +501,7 @@ function togglePause() {
 function toggleSound() {
   muted = !muted;
   el.soundBtn.textContent = muted ? '🔇' : '🔊';
-  // TODO: подключить реальный звук — здесь будет mainSong.muted = muted
+  Sound.setMuted(muted);
 }
 
 // --- Ввод ника + контакта ---

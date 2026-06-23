@@ -64,6 +64,45 @@ html, body {
   transition: width .2s linear;
 }
 
+/* Энергия */
+#energy-bar {
+  width: 100%;
+  height: 6px;
+  margin-top: 6px;
+  background: var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+#energyBar {
+  display: block;
+  height: 100%;
+  width: 60%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #4ad6ff, #6effb0);
+  transition: width .18s ease, background .3s ease;
+}
+#energyBar.low { background: linear-gradient(90deg, #ff6b6b, #ffa14a); }
+
+/* Туториал-подсказка */
+#tutHint {
+  position: absolute;
+  bottom: 168px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,77,125,0.92);
+  color: #fff;
+  font-size: 14px; font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 12px;
+  max-width: 88%;
+  text-align: center;
+  line-height: 1.3;
+  z-index: 6;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .4s ease;
+}
+#tutHint.show { opacity: 1; }
+
 /* HUD */
 #hud {
   width: 100%;
