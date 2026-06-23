@@ -30,7 +30,15 @@ const Leaderboard = (() => {
     return load().slice(0, n);
   }
 
+  // Сколько очков не хватило до места n (0 если уже в топ-n или мест меньше n)
+  function gapToTop(n, score) {
+    const list = load();
+    if (list.length < n) return 0;
+    const nth = list[n - 1].score;
+    return Math.max(0, nth - score + 1);
+  }
+
   function clear() { persist([]); }
 
-  return { submit, top, clear };
+  return { submit, top, clear, gapToTop };
 })();

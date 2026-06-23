@@ -92,7 +92,7 @@ function freshState() {
   return {
     running: false, score: 0, combo: 0, maxCombo: 0,
     hits: 0, perfects: 0, misses: 0,
-    energy: CONFIG.energy.start, failed: false,
+    hype: CONFIG.hype.start, slump: false,
     arrows: [], startTime: 0, lastFrame: 0,
     nextHalfBeat: 0, halfBeatIdx: 0,
   };
@@ -145,32 +145,44 @@ function pressDir(dir) {
   }
   if (best) {
     best.hit = true; best.dead = true;
-    registerHit(best, bestErr);
+    registerHit(best, bestErr, best.d - CONFIG.target.radius);
   }
 }
 
-function registerHit(arrow, err) {
-  const perfect = err <= PERFECT_WINDOW;
+// Оценка тайминга: класс (perfect/good/early/late) + параметры из конфига
+function judgeTiming(err, signed) {
+  const T = CONFIG.timing;
+  if (err <= T.perfect.window) return { cls: 'perfect', label: 'PERFECT', t: T.perfect };
+  if (err <= T.good.window)    return { cls: 'good',    label: 'GOOD',    t: T.good };
+  // на краю окна — различаем рано/поздно (signed>0: стрелка ещё снаружи кольца = рано)
+  return signed > 0
+    ? { cls: 'early', label: 'TOO EARLY', t: T.edge }
+    : { cls: 'late',  label: 'TOO LATE',  t: T.edge };
+}
+
+function registerHit(arrow, err, signed) {
+  const j = judgeTiming(err, signed);
   state.combo += 1;
   state.hits += 1;
-  if (perfect) state.perfects += 1;
+  if (j.cls === 'perfect') state.perfects += 1;
   state.maxCombo = Math.max(state.maxCombo, state.combo);
 
   const tier = CONFIG.scoreTiers.find(t => state.combo <= t.combo);
-  const pts = Math.round(tier.points * (perfect ? 1 : 0.6));
+  const slumpMult = state.slump ? CONFIG.hype.slumpMult : 1;
+  const pts = Math.round(tier.points * j.t.mult * slumpMult);
   state.score += pts;
 
   const color = CONFIG.dirColors[arrow.dir];
   const p = arrowPos({ dir: arrow.dir, d: CONFIG.target.radius });
   effects.pulses.push({ color, t: 0 });
-  spawnParticles(p.x, p.y, color, perfect ? 10 : 6);
-  showJudgment(perfect ? 'perfect' : 'good', perfect ? 'PERFECT' : 'GOOD');
-  spawnFloater('+' + pts, perfect ? '#6effb0' : '#ffd166', p.x, p.y);
+  spawnParticles(p.x, p.y, color, j.cls === 'perfect' ? 10 : 6);
+  showJudgment(j.cls, j.label);
+  spawnFloater('+' + pts, j.cls === 'perfect' ? '#6effb0' : '#ffd166', p.x, p.y);
 
   if (state.combo > 1 && state.combo % 10 === 0) effects.shake = 8; // тряска на круглых комбо
 
-  addEnergy(perfect ? CONFIG.energy.perfectGain : CONFIG.energy.hitGain);
-  Sound[perfect ? 'perfect' : 'hit']();
+  addHype(j.t.gain);
+  Sound[j.cls === 'perfect' ? 'perfect' : 'hit']();
   updateHud();
   updateDancer();
 }
@@ -179,26 +191,30 @@ function registerMiss() {
   state.combo = 0;
   state.misses += 1;
   showJudgment('miss', 'МИМО');
-  addEnergy(-CONFIG.energy.missCost);
+  addHype(-CONFIG.hype.missCost);
   Sound.miss();
   updateHud();
   setDancerMood('miss');
-  setTimeout(() => { if (state.running) updateDancer(); }, 400);
+  setTimeout(() => { if (state.running && !state.slump) updateDancer(); }, 400);
 }
 
-// --- Энергия ---
-function addEnergy(delta) {
-  state.energy = Math.max(0, Math.min(CONFIG.energy.max, state.energy + delta));
-  updateEnergyBar();
-  if (state.energy <= 0 && state.running && !state.failed) {
-    state.failed = true;
-    endGame();
+// --- Hype (soft-fail, без гейм-овера) ---
+function addHype(delta) {
+  state.hype = Math.max(0, Math.min(CONFIG.hype.max, state.hype + delta));
+  if (!state.slump && state.hype <= 0) {
+    state.slump = true;
+    showJudgment('miss', 'ХАЙП УПАЛ!');
+    setDancerMood('miss');
+  } else if (state.slump && state.hype >= CONFIG.hype.recoverAt) {
+    state.slump = false;
+    updateDancer();
   }
+  updateHypeBar();
 }
-function updateEnergyBar() {
-  const pct = state.energy / CONFIG.energy.max * 100;
+function updateHypeBar() {
+  const pct = state.hype / CONFIG.hype.max * 100;
   el.energyBar.style.width = pct + '%';
-  el.energyBar.classList.toggle('low', pct <= 30);
+  el.energyBar.classList.toggle('low', state.slump || pct <= 30);
 }
 
 // --- HUD / танцор ---
@@ -218,6 +234,7 @@ function updateHud() {
 }
 
 function updateDancer() {
+  if (state && state.slump) { setDancerMood('miss'); return; }
   let mood = 'idle';
   for (const m of CONFIG.moods) if (state.combo >= m.combo) mood = m.mood;
   setDancerMood(mood);
@@ -420,7 +437,7 @@ function beginRound() {
   el.floaters.innerHTML = '';
   el.progressBar.style.width = '0%';
   state.combo = 0; updateHud(); updateDancer();
-  updateEnergyBar();
+  updateHypeBar();
   el.pauseBtn.textContent = '⏸';
   Sound.ensure(); Sound.setMuted(muted);
   maybeShowTutorial();
@@ -473,22 +490,28 @@ function endGame() {
 
   const total = state.hits + state.misses;
   const accuracy = total ? Math.round(state.hits / total * 100) : 0;
+  const rankLetter = (CONFIG.ranks.find(r => accuracy >= r.min) || CONFIG.ranks[CONFIG.ranks.length - 1]).rank;
   const e = CONFIG.endings.slice().reverse().find(x => state.score >= x.min) || CONFIG.endings[0];
 
-  const { rank, total: players } = Leaderboard.submit({
+  const sub = Leaderboard.submit({
     name: player.name, contact: player.contact,
-    score: state.score, maxCombo: state.maxCombo, accuracy,
+    score: state.score, maxCombo: state.maxCombo, accuracy, rank: rankLetter,
   });
 
-  el.endTitle.textContent = state.failed ? 'Энергия кончилась' : e.title;
-  el.endStory.textContent = state.failed
-    ? 'Толпа выдохлась раньше времени. Лови ритм точнее — и держи комбо!'
-    : e.story;
+  el.endTitle.textContent = e.title;
+  el.endStory.textContent = e.story;
   el.resultStats.innerHTML = `
+    <div class="stat rank rank-${rankLetter}"><b>${rankLetter}</b><span>ранг</span></div>
     <div class="stat"><b>${state.score}</b><span>очки</span></div>
+    <div class="stat"><b>${accuracy}%</b><span>точность</span></div>
     <div class="stat"><b>${state.maxCombo}</b><span>макс. комбо</span></div>
-    <div class="stat"><b>${accuracy}%</b><span>точность</span></div>`;
-  el.rankLine.innerHTML = `Твоё место: <b>#${rank}</b> из ${players}`;
+    <div class="stat"><b>${state.perfects}</b><span>perfect</span></div>`;
+
+  // место + «сколько до топа»
+  let line = `Ты сегодня <b>#${sub.rank}</b> из ${sub.total}`;
+  const gap = Leaderboard.gapToTop(5, state.score);
+  if (sub.rank > 5 && gap > 0) line += ` · до топ-5 не хватило <b>${gap}</b>`;
+  el.rankLine.innerHTML = line;
   showScreen('result');
 }
 

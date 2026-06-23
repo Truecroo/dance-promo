@@ -23,11 +23,32 @@ const CONFIG = {
     ],
   },
 
-  // Энергия (здоровье). Мажешь — падает, попадаешь — растёт. 0 -> провал.
-  energy: {
+  // Hype (кураж толпы). Без жёсткого провала: на 0 — «провал куража» (slump),
+  // комбо рвётся и очки режутся, пока хайп не восстановится. Раунд кончается
+  // только по времени.
+  hype: {
     start: 60, max: 100,
-    missCost: 14, hitGain: 4, perfectGain: 7,
+    missCost: 14, gain: 4, perfectGain: 7,
+    slumpMult: 0.5,   // множитель очков во время slump
+    recoverAt: 30,    // хайп, при котором выходим из slump
+    feverAt: 100,     // (для Фазы 3c) хайп для Fever Mode
   },
+
+  // Тайминг-оценки попадания (по |d - radius|, в порядке от точного к грубому)
+  timing: {
+    perfect: { window: 14, mult: 1.0,  gain: 7 },
+    good:    { window: 26, mult: 0.7,  gain: 4 },
+    edge:    { window: 34, mult: 0.4,  gain: 2 }, // Early/Late — на краю окна
+  },
+
+  // Ранги по точности (accuracy %). Первый подходящий сверху.
+  ranks: [
+    { min: 95, rank: 'S' },
+    { min: 85, rank: 'A' },
+    { min: 70, rank: 'B' },
+    { min: 50, rank: 'C' },
+    { min: 0,  rank: 'D' },
+  ],
 
   // Очки в зависимости от текущего комбо
   scoreTiers: [

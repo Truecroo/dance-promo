@@ -191,6 +191,8 @@ html, body {
 #judgment.show { animation: judge .45s ease-out; }
 #judgment.perfect { color: #6effb0; }
 #judgment.good    { color: #ffd166; }
+#judgment.early   { color: #4ad6ff; }
+#judgment.late    { color: #c08bff; }
 #judgment.miss    { color: #ff6b6b; }
 
 /* Всплывающие очки */
@@ -300,10 +302,16 @@ html, body {
 .formError { color: #ff6b6b; font-size: 13px; margin-bottom: 12px; }
 
 /* Результат — статы */
-#resultStats { display: flex; justify-content: center; gap: 22px; margin-bottom: 16px; }
-.stat { text-align: center; }
-.stat b { display: block; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#resultStats { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 20px; margin-bottom: 16px; }
+.stat { text-align: center; min-width: 56px; }
+.stat b { display: block; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .stat span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.stat.rank b { font-size: 40px; line-height: .9; }
+.rank-S b { color: #ffd166; text-shadow: 0 0 16px rgba(255,209,102,.7); }
+.rank-A b { color: #6effb0; }
+.rank-B b { color: #4ad6ff; }
+.rank-C b { color: #c08bff; }
+.rank-D b { color: var(--muted); }
 #rankLine { font-size: 15px; color: var(--muted); margin-bottom: 22px; }
 #rankLine b { color: var(--accent); font-size: 18px; }
 
