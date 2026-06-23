@@ -16,7 +16,11 @@ const el = {
   floaters:   document.getElementById('floaters'),
   progressBar:document.getElementById('progressBar'),
   energyBar:  document.getElementById('energyBar'),
-  tutHint:    document.getElementById('tutHint'),
+  tutText:    document.getElementById('tutText'),
+  gameRoot:   document.getElementById('game'),
+  selectText: document.getElementById('selectText'),
+  selectTitle:document.getElementById('selectTitle'),
+  selectTrack:document.getElementById('selectTrack'),
   overlay:    document.getElementById('overlay'),
   endTitle:   document.getElementById('endTitle'),
   endStory:   document.getElementById('endStory'),
@@ -35,12 +39,14 @@ const el = {
 const screens = {
   intro:       document.getElementById('screenIntro'),
   entry:       document.getElementById('screenEntry'),
+  select:      document.getElementById('screenSelect'),
   result:      document.getElementById('screenResult'),
   leaderboard: document.getElementById('screenLeaderboard'),
 };
 
 let player = { name: '', contact: '' };
 let paused = false, muted = false, countingDown = false;
+let tutStepIdx = 0, tutArrowIdx = 0, tutMiss = 0; // прогресс туториала
 
 const DIRS = ['up', 'down', 'left', 'right'];
 const startDist = S / 2 + CONFIG.arrow.size;
@@ -93,6 +99,7 @@ function freshState() {
     running: false, score: 0, combo: 0, maxCombo: 0,
     hits: 0, perfects: 0, misses: 0,
     hype: CONFIG.hype.start, slump: false,
+    mode: 'game', // 'game' | 'tutorial'
     arrows: [], startTime: 0, lastFrame: 0,
     nextHalfBeat: 0, halfBeatIdx: 0,
   };
@@ -145,7 +152,9 @@ function pressDir(dir) {
   }
   if (best) {
     best.hit = true; best.dead = true;
-    registerHit(best, bestErr, best.d - CONFIG.target.radius);
+    const signed = best.d - CONFIG.target.radius;
+    if (state.mode === 'tutorial') tutorialHit(best, bestErr, signed);
+    else registerHit(best, bestErr, signed);
   }
 }
 
@@ -373,29 +382,38 @@ function loop(now) {
   }
   const dt = Math.min(0.05, (now - state.lastFrame) / 1000);
   state.lastFrame = now;
+  const tut = state.mode === 'tutorial';
 
-  // бит-планировщик: полубитами
-  const halfBeatMs = 30000 / CONFIG.beat.bpm;
-  while (now >= state.nextHalfBeat) {
-    onHalfBeat(state.halfBeatIdx, now);
-    state.halfBeatIdx++;
-    state.nextHalfBeat += halfBeatMs;
+  // бит-планировщик (только в зачётном режиме)
+  if (!tut) {
+    const halfBeatMs = 30000 / CONFIG.beat.bpm;
+    while (now >= state.nextHalfBeat) {
+      onHalfBeat(state.halfBeatIdx, now);
+      state.halfBeatIdx++;
+      state.nextHalfBeat += halfBeatMs;
+    }
   }
 
   const R = CONFIG.target.radius;
+  const speed = CONFIG.arrow.speed * (tut ? CONFIG.tutorial.speedMult : 1);
   for (const a of state.arrows) {
     if (a.dead) continue;
-    a.d -= CONFIG.arrow.speed * dt;
-    if (a.d < R - CONFIG.hitWindow) { a.dead = true; registerMiss(); }
+    a.d -= speed * dt;
+    if (a.d < R - CONFIG.hitWindow) {
+      a.dead = true;
+      tut ? tutorialMiss(a) : registerMiss();
+    }
   }
   state.arrows = state.arrows.filter(a => !a.dead);
 
   render(dt);
   applyShake();
 
-  const elapsed = now - state.startTime;
-  el.progressBar.style.width = Math.min(100, elapsed / CONFIG.trackDuration * 100) + '%';
-  if (elapsed >= CONFIG.trackDuration) { endGame(); return; }
+  if (!tut) {
+    const elapsed = now - state.startTime;
+    el.progressBar.style.width = Math.min(100, elapsed / CONFIG.trackDuration * 100) + '%';
+    if (elapsed >= CONFIG.trackDuration) { endGame(); return; }
+  }
   requestAnimationFrame(loop);
 }
 
@@ -426,9 +444,10 @@ function escapeHtml(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-// --- Жизненный цикл ---
+// --- Жизненный цикл (зачётный режим) ---
 function beginRound() {
   showScreen(null);
+  el.gameRoot.classList.remove('tutorial');
   state = freshState();
   effects = { pulses: [], particles: [], shake: 0 };
   paused = false;
@@ -440,7 +459,6 @@ function beginRound() {
   updateHypeBar();
   el.pauseBtn.textContent = '⏸';
   Sound.ensure(); Sound.setMuted(muted);
-  maybeShowTutorial();
   runCountdown(() => {
     state.running = true;
     const t = performance.now();
@@ -450,14 +468,93 @@ function beginRound() {
   });
 }
 
-// Подсказка на первой игре (один раз на устройство)
-function maybeShowTutorial() {
-  if (localStorage.getItem('dancePromo.seenTutorial')) return;
-  el.tutHint.classList.remove('hidden');
-  el.tutHint.classList.add('show');
-  setTimeout(() => el.tutHint.classList.remove('show'), 4500);
-  setTimeout(() => el.tutHint.classList.add('hidden'), 5000);
+// --- Туториал-разминка ---
+function beginTutorial() {
+  showScreen(null);
+  el.gameRoot.classList.add('tutorial');
+  state = freshState();
+  state.mode = 'tutorial';
+  effects = { pulses: [], particles: [], shake: 0 };
+  paused = false;
+  root.style.setProperty('--energy', '0');
+  root.style.setProperty('--shake', '0px');
+  el.floaters.innerHTML = '';
+  updateDancer();
+  Sound.ensure(); Sound.setMuted(muted);
+  tutStepIdx = 0; tutArrowIdx = 0; tutMiss = 0;
+  showTutText(CONFIG.tutorial.steps[0].text);
+  spawnTutorialArrow();
+  state.running = true;
+  state.lastFrame = performance.now();
+  requestAnimationFrame(loop);
+}
+
+function showTutText(t) {
+  el.tutText.textContent = t;
+  el.tutText.classList.remove('hidden');
+}
+
+function spawnTutorialArrow() {
+  const step = CONFIG.tutorial.steps[tutStepIdx];
+  const dir = step.arrows[tutArrowIdx];
+  state.arrows.push({ dir, d: startDist, hit: false, dead: false });
+}
+
+function tutorialHit(arrow, err, signed) {
+  const j = judgeTiming(err, signed);
+  state.combo += 1;
+  const color = CONFIG.dirColors[arrow.dir];
+  const p = arrowPos({ dir: arrow.dir, d: CONFIG.target.radius });
+  effects.pulses.push({ color, t: 0 });
+  spawnParticles(p.x, p.y, color, j.cls === 'perfect' ? 10 : 6);
+  showJudgment(j.cls, j.label);
+  Sound[j.cls === 'perfect' ? 'perfect' : 'hit']();
+  updateDancer();
+  tutAdvance();
+}
+
+function tutorialMiss() {
+  showJudgment('miss', 'ещё разок');
+  Sound.miss();
+  tutMiss += 1;
+  if (tutMiss >= CONFIG.tutorial.mercyMisses) { tutAdvance(); return; }
+  setTimeout(() => { if (state.running) spawnTutorialArrow(); }, 250);
+}
+
+function tutAdvance() {
+  tutMiss = 0;
+  tutArrowIdx += 1;
+  const step = CONFIG.tutorial.steps[tutStepIdx];
+  if (tutArrowIdx < step.arrows.length) {
+    setTimeout(() => { if (state.running) spawnTutorialArrow(); }, 320);
+    return;
+  }
+  // шаг пройден
+  tutStepIdx += 1; tutArrowIdx = 0;
+  if (tutStepIdx < CONFIG.tutorial.steps.length) {
+    showTutText(CONFIG.tutorial.steps[tutStepIdx].text);
+    setTimeout(() => { if (state.running) spawnTutorialArrow(); }, 600);
+  } else {
+    // туториал завершён — грув-момент и в Select
+    showJudgment('perfect', CONFIG.tutorial.groove);
+    showTutText(CONFIG.tutorial.groove);
+    setTimeout(finishTutorial, 1400);
+  }
+}
+
+function finishTutorial() {
+  state.running = false;
+  el.gameRoot.classList.remove('tutorial');
+  el.tutText.classList.add('hidden');
   try { localStorage.setItem('dancePromo.seenTutorial', '1'); } catch {}
+  showSelect();
+}
+
+function showSelect() {
+  el.selectTitle.textContent = CONFIG.select.title;
+  el.selectTrack.textContent = CONFIG.select.track;
+  el.selectText.textContent = CONFIG.select.text;
+  showScreen('select');
 }
 
 function runCountdown(done) {
@@ -535,7 +632,9 @@ function submitEntry() {
   if (!isValidContact(contact)) return showEntryError('Укажи email или телефон');
   player = { name, contact };
   el.entryError.classList.add('hidden');
-  beginRound();
+  // первый заход — разминка; потом сразу Select
+  if (localStorage.getItem('dancePromo.seenTutorial')) showSelect();
+  else beginTutorial();
 }
 function isValidContact(v) {
   const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -554,8 +653,10 @@ document.getElementById('entryBackBtn').onclick = () => showScreen('intro');
 document.getElementById('startGameBtn').onclick = submitEntry;
 document.getElementById('againBtn').onclick = () => beginRound();
 document.getElementById('toLbAfterBtn').onclick = () => { renderLeaderboard(); showScreen('leaderboard'); };
-document.getElementById('lbPlayBtn').onclick = () => player.name ? beginRound() : showScreen('entry');
+document.getElementById('lbPlayBtn').onclick = () => player.name ? showSelect() : showScreen('entry');
 document.getElementById('lbResetBtn').onclick = () => { Leaderboard.clear(); renderLeaderboard(); };
+document.getElementById('toStageBtn').onclick = () => beginRound();
+document.getElementById('selectLbBtn').onclick = () => { renderLeaderboard(); showScreen('leaderboard'); };
 el.pauseBtn.onclick = togglePause;
 el.soundBtn.onclick = toggleSound;
 el.inputContact.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitEntry(); });

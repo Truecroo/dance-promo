@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Dance Promo</title>
-  <link rel="stylesheet" href="css/style.css?v=12" />
+  <link rel="stylesheet" href="css/style.css?v=13" />
 </head>
 <body>
   <div id="energy"></div> <!-- реактивный фон танцпола -->
@@ -38,8 +38,8 @@
       <div id="countdown" class="hidden"></div>
     </div>
 
-    <!-- Подсказка-туториал (первая игра) -->
-    <div id="tutHint" class="hidden">Жми кнопку той стороны, откуда летит стрелка ↡</div>
+    <!-- Текст туториала -->
+    <div id="tutText" class="hidden"></div>
 
     <!-- Тач-кнопки (4 направления) -->
     <div id="pad">
@@ -79,6 +79,15 @@
         <button id="entryBackBtn" class="ghostBtn">Назад</button>
       </div>
 
+      <!-- Select (вход в зачётный режим) -->
+      <div class="modal hidden" id="screenSelect" data-screen="select">
+        <h1 id="selectTitle">Тебя вызвали в Select!</h1>
+        <div id="selectTrack" class="trackTag"></div>
+        <p class="story" id="selectText"></p>
+        <button id="toStageBtn" class="bigBtn">Выйти на сцену</button>
+        <button id="selectLbBtn" class="ghostBtn">🏆 Таблица лидеров</button>
+      </div>
+
       <!-- Результат -->
       <div class="modal hidden" id="screenResult" data-screen="result">
         <h1 id="endTitle">Финал</h1>
@@ -100,9 +109,9 @@
     </div>
   </div>
 
-  <script src="js/config.js?v=12"></script>
-  <script src="js/audio.js?v=12"></script>
-  <script src="js/leaderboard.js?v=12"></script>
-  <script src="js/game.js?v=12"></script>
+  <script src="js/config.js?v=13"></script>
+  <script src="js/audio.js?v=13"></script>
+  <script src="js/leaderboard.js?v=13"></script>
+  <script src="js/game.js?v=13"></script>
 </body>
 </html>
