@@ -218,6 +218,90 @@ html, body {
 .bigBtn:hover { filter: brightness(1.08); }
 .bigBtn:active { transform: scale(.96); }
 
+/* Кнопки-призраки и иконки */
+.ghostBtn {
+  display: block;
+  margin: 12px auto 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+.ghostBtn:hover { color: var(--text); }
+
+#hudControls { display: flex; gap: 8px; align-items: flex-start; padding-top: 4px; }
+.iconBtn {
+  width: 38px; height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+.iconBtn:active { transform: scale(.92); }
+
+/* Поля ввода */
+.field { display: block; text-align: left; margin-bottom: 16px; }
+.field span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.field span i { font-style: normal; opacity: .7; }
+.field input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
+}
+.field input:focus { border-color: var(--accent); }
+.formError { color: #ff6b6b; font-size: 13px; margin-bottom: 12px; }
+
+/* Результат — статы */
+#resultStats { display: flex; justify-content: center; gap: 22px; margin-bottom: 16px; }
+.stat { text-align: center; }
+.stat b { display: block; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+#rankLine { font-size: 15px; color: var(--muted); margin-bottom: 22px; }
+#rankLine b { color: var(--accent); font-size: 18px; }
+
+/* Лидерборд */
+.lbList { list-style: none; text-align: left; margin: 0 0 20px; padding: 0; max-height: 46vh; overflow-y: auto; }
+.lbRow {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: rgba(255,255,255,0.04);
+}
+.lbRow.me { background: rgba(255,77,125,0.18); border: 1px solid var(--accent); }
+.lbPos { width: 24px; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.lbName { flex: 1; font-weight: 600; }
+.lbScore { font-variant-numeric: tabular-nums; font-weight: 700; }
+.lbEmpty { color: var(--muted); text-align: center; padding: 24px 0; list-style: none; }
+
+/* Отсчёт */
+#countdown {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 96px; font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(255,77,125,.8);
+  z-index: 5;
+  pointer-events: none;
+}
+#countdown.hidden { display: none; }
+#countdown.show { animation: cd .6s ease-out; }
+@keyframes cd {
+  0% { opacity: 0; transform: scale(1.8); }
+  30% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.8); }
+}
+
 .hidden { display: none; }
 
 /* Анимации */

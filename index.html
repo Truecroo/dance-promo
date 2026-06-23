@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Dance Promo</title>
-  <link rel="stylesheet" href="css/style.css?v=8" />
+  <link rel="stylesheet" href="css/style.css?v=9" />
 </head>
 <body>
   <div id="energy"></div> <!-- реактивный фон танцпола -->
@@ -16,6 +16,10 @@
     <!-- HUD -->
     <header id="hud">
       <div id="score"><span class="label">очки</span><b id="scoreVal">0</b></div>
+      <div id="hudControls">
+        <button id="soundBtn" class="iconBtn" aria-label="звук">🔊</button>
+        <button id="pauseBtn" class="iconBtn" aria-label="пауза">⏸</button>
+      </div>
       <div id="best"><span class="label">макс. комбо</span><b id="bestVal">0</b></div>
     </header>
 
@@ -29,6 +33,7 @@
       </div>
       <div id="judgment"></div>
       <div id="floaters"></div>
+      <div id="countdown" class="hidden"></div>
     </div>
 
     <!-- Тач-кнопки (4 направления) -->
@@ -41,26 +46,57 @@
       </div>
     </div>
 
-    <!-- Модалки / сюжет -->
+    <!-- ===== Экраны ===== -->
     <div id="overlay">
-      <div class="modal" id="startModal">
+
+      <!-- Интро -->
+      <div class="modal" id="screenIntro" data-screen="intro">
         <h1>Танцпол открыт</h1>
-        <p class="story">Наш герой стоит у края танцпола. Толпа ждёт.
-          Покажи ему ритм — лови стрелки, что летят к центру, и жми в нужный
-          момент. Чем длиннее комбо, тем круче он танцует.</p>
-        <button id="startBtn" class="bigBtn">Начать</button>
+        <p class="story">Лови стрелки, что летят к центру, и жми в нужный момент.
+          Чем длиннее комбо — тем круче танцует герой. Попади в топ!</p>
+        <button id="toEntryBtn" class="bigBtn">Играть</button>
+        <button id="toLbBtn" class="ghostBtn">🏆 Таблица лидеров</button>
       </div>
 
-      <div class="modal hidden" id="endModal">
+      <!-- Ввод ника + контакта -->
+      <div class="modal hidden" id="screenEntry" data-screen="entry">
+        <h1>Кто зажигает?</h1>
+        <label class="field">
+          <span>Ник</span>
+          <input id="inputName" type="text" maxlength="16" placeholder="например, NEON" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>Контакт <i>(email или телефон)</i></span>
+          <input id="inputContact" type="text" maxlength="60" placeholder="you@mail.com" autocomplete="off" />
+        </label>
+        <p class="formError hidden" id="entryError"></p>
+        <button id="startGameBtn" class="bigBtn">Поехали</button>
+        <button id="entryBackBtn" class="ghostBtn">Назад</button>
+      </div>
+
+      <!-- Результат -->
+      <div class="modal hidden" id="screenResult" data-screen="result">
         <h1 id="endTitle">Финал</h1>
         <p class="story" id="endStory"></p>
-        <div id="finalScore"></div>
-        <button id="againBtn" class="bigBtn">Ещё раз</button>
+        <div id="resultStats"></div>
+        <div id="rankLine"></div>
+        <button id="toLbAfterBtn" class="bigBtn">🏆 В таблицу</button>
+        <button id="againBtn" class="ghostBtn">Ещё раз</button>
       </div>
+
+      <!-- Лидерборд -->
+      <div class="modal hidden" id="screenLeaderboard" data-screen="leaderboard">
+        <h1>Таблица лидеров</h1>
+        <ol id="lbList" class="lbList"></ol>
+        <button id="lbPlayBtn" class="bigBtn">Играть</button>
+        <button id="lbResetBtn" class="ghostBtn">Очистить</button>
+      </div>
+
     </div>
   </div>
 
-  <script src="js/config.js?v=8"></script>
-  <script src="js/game.js?v=8"></script>
+  <script src="js/config.js?v=9"></script>
+  <script src="js/leaderboard.js?v=9"></script>
+  <script src="js/game.js?v=9"></script>
 </body>
 </html>

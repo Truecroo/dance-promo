@@ -16,12 +16,29 @@ const el = {
   floaters:   document.getElementById('floaters'),
   progressBar:document.getElementById('progressBar'),
   overlay:    document.getElementById('overlay'),
-  startModal: document.getElementById('startModal'),
-  endModal:   document.getElementById('endModal'),
   endTitle:   document.getElementById('endTitle'),
   endStory:   document.getElementById('endStory'),
-  finalScore: document.getElementById('finalScore'),
+  resultStats:document.getElementById('resultStats'),
+  rankLine:   document.getElementById('rankLine'),
+  countdown:  document.getElementById('countdown'),
+  inputName:  document.getElementById('inputName'),
+  inputContact: document.getElementById('inputContact'),
+  entryError: document.getElementById('entryError'),
+  lbList:     document.getElementById('lbList'),
+  pauseBtn:   document.getElementById('pauseBtn'),
+  soundBtn:   document.getElementById('soundBtn'),
 };
+
+// Экраны (модалки)
+const screens = {
+  intro:       document.getElementById('screenIntro'),
+  entry:       document.getElementById('screenEntry'),
+  result:      document.getElementById('screenResult'),
+  leaderboard: document.getElementById('screenLeaderboard'),
+};
+
+let player = { name: '', contact: '' };
+let paused = false, muted = false, countingDown = false;
 
 const DIRS = ['up', 'down', 'left', 'right'];
 const startDist = S / 2 + CONFIG.arrow.size;
@@ -72,8 +89,9 @@ function animateDancer(now) {
 function freshState() {
   return {
     running: false, score: 0, combo: 0, maxCombo: 0,
+    hits: 0, perfects: 0, misses: 0,
     arrows: [], spawnInterval: CONFIG.spawn.start,
-    lastSpawn: 0, startTime: 0, lastFrame: 0,
+    lastSpawn: 0, startTime: 0, lastFrame: 0, pausedMs: 0,
   };
 }
 state = freshState();
@@ -97,7 +115,7 @@ function arrowPos(a) {
 // --- Ввод ---
 function pressDir(dir) {
   flashButton(dir);
-  if (!state.running) return;
+  if (!state.running || paused || countingDown) return;
   const R = CONFIG.target.radius;
   let best = null, bestErr = Infinity;
   for (const a of state.arrows) {
@@ -114,6 +132,8 @@ function pressDir(dir) {
 function registerHit(arrow, err) {
   const perfect = err <= PERFECT_WINDOW;
   state.combo += 1;
+  state.hits += 1;
+  if (perfect) state.perfects += 1;
   state.maxCombo = Math.max(state.maxCombo, state.combo);
 
   const tier = CONFIG.scoreTiers.find(t => state.combo <= t.combo);
@@ -135,6 +155,7 @@ function registerHit(arrow, err) {
 
 function registerMiss() {
   state.combo = 0;
+  state.misses += 1;
   showJudgment('miss', 'МИМО');
   updateHud();
   setDancerMood('miss');
@@ -287,6 +308,13 @@ function applyShake() {
 // --- Главный цикл ---
 function loop(now) {
   if (!state.running) return;
+  // на паузе замораживаем таймеры (сдвигаем их вперёд на паузный интервал)
+  if (paused) {
+    const skip = now - state.lastFrame;
+    state.startTime += skip; state.lastSpawn += skip; state.lastFrame = now;
+    requestAnimationFrame(loop);
+    return;
+  }
   const dt = Math.min(0.05, (now - state.lastFrame) / 1000);
   state.lastFrame = now;
 
@@ -313,41 +341,148 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 
+// --- Экраны ---
+function showScreen(name) {
+  for (const k in screens) screens[k].classList.toggle('hidden', k !== name);
+  el.overlay.classList.toggle('hidden', !name);
+}
+
+function renderLeaderboard() {
+  const list = Leaderboard.top(10);
+  if (!list.length) {
+    el.lbList.innerHTML = '<li class="lbEmpty">Пока пусто — будь первым!</li>';
+    return;
+  }
+  el.lbList.innerHTML = list.map((r, i) => {
+    const me = (r.name === player.name && r.contact === player.contact) ? ' me' : '';
+    return `<li class="lbRow${me}">
+      <span class="lbPos">${i + 1}</span>
+      <span class="lbName">${escapeHtml(r.name)}</span>
+      <span class="lbScore">${r.score}</span>
+    </li>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 // --- Жизненный цикл ---
-function startGame() {
+function beginRound() {
+  showScreen(null);
   state = freshState();
-  state.running = true;
-  const t = performance.now();
-  state.lastSpawn = t; state.startTime = t; state.lastFrame = t;
   effects = { pulses: [], particles: [], shake: 0 };
+  paused = false;
   root.style.setProperty('--energy', '0');
+  root.style.setProperty('--shake', '0px');
   el.floaters.innerHTML = '';
-  el.overlay.classList.add('hidden');
-  el.startModal.classList.add('hidden');
-  el.endModal.classList.add('hidden');
-  updateHud();
-  updateDancer();
-  requestAnimationFrame(loop);
+  el.progressBar.style.width = '0%';
+  state.combo = 0; updateHud(); updateDancer();
+  el.pauseBtn.textContent = '⏸';
+  runCountdown(() => {
+    state.running = true;
+    const t = performance.now();
+    state.lastSpawn = t; state.startTime = t; state.lastFrame = t;
+    requestAnimationFrame(loop);
+  });
+}
+
+function runCountdown(done) {
+  countingDown = true;
+  const steps = ['3', '2', '1', 'GO!'];
+  let i = 0;
+  el.countdown.classList.remove('hidden');
+  const tick = () => {
+    if (i >= steps.length) {
+      el.countdown.classList.add('hidden');
+      countingDown = false;
+      done();
+      return;
+    }
+    el.countdown.textContent = steps[i];
+    el.countdown.classList.remove('show'); void el.countdown.offsetWidth;
+    el.countdown.classList.add('show');
+    i++;
+    setTimeout(tick, 650);
+  };
+  tick();
 }
 
 function endGame() {
   state.running = false;
+  paused = false;
   root.style.setProperty('--energy', '0');
   root.style.setProperty('--shake', '0px');
+  setDancerMood('idle');
+
+  const total = state.hits + state.misses;
+  const accuracy = total ? Math.round(state.hits / total * 100) : 0;
   const e = CONFIG.endings.slice().reverse().find(x => state.score >= x.min) || CONFIG.endings[0];
+
+  const { rank, total: players } = Leaderboard.submit({
+    name: player.name, contact: player.contact,
+    score: state.score, maxCombo: state.maxCombo, accuracy,
+  });
+
   el.endTitle.textContent = e.title;
   el.endStory.textContent = e.story;
-  el.finalScore.innerHTML = `Очки: <b>${state.score}</b> · макс. комбо: <b>${state.maxCombo}</b>`;
-  el.overlay.classList.remove('hidden');
-  el.endModal.classList.remove('hidden');
+  el.resultStats.innerHTML = `
+    <div class="stat"><b>${state.score}</b><span>очки</span></div>
+    <div class="stat"><b>${state.maxCombo}</b><span>макс. комбо</span></div>
+    <div class="stat"><b>${accuracy}%</b><span>точность</span></div>`;
+  el.rankLine.innerHTML = `Твоё место: <b>#${rank}</b> из ${players}`;
+  showScreen('result');
+}
+
+// --- Пауза / звук ---
+function togglePause() {
+  if (!state.running || countingDown) return;
+  paused = !paused;
+  el.pauseBtn.textContent = paused ? '▶' : '⏸';
+}
+function toggleSound() {
+  muted = !muted;
+  el.soundBtn.textContent = muted ? '🔇' : '🔊';
+  // TODO: подключить реальный звук — здесь будет mainSong.muted = muted
+}
+
+// --- Ввод ника + контакта ---
+function submitEntry() {
+  const name = el.inputName.value.trim();
+  const contact = el.inputContact.value.trim();
+  if (name.length < 2) return showEntryError('Введи ник (мин. 2 символа)');
+  if (!isValidContact(contact)) return showEntryError('Укажи email или телефон');
+  player = { name, contact };
+  el.entryError.classList.add('hidden');
+  beginRound();
+}
+function isValidContact(v) {
+  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phone = /^\+?[\d\s\-()]{7,}$/;
+  return email.test(v) || phone.test(v);
+}
+function showEntryError(msg) {
+  el.entryError.textContent = msg;
+  el.entryError.classList.remove('hidden');
 }
 
 // --- Слушатели ---
-document.getElementById('startBtn').onclick = startGame;
-document.getElementById('againBtn').onclick = startGame;
+document.getElementById('toEntryBtn').onclick = () => showScreen('entry');
+document.getElementById('toLbBtn').onclick = () => { renderLeaderboard(); showScreen('leaderboard'); };
+document.getElementById('entryBackBtn').onclick = () => showScreen('intro');
+document.getElementById('startGameBtn').onclick = submitEntry;
+document.getElementById('againBtn').onclick = () => beginRound();
+document.getElementById('toLbAfterBtn').onclick = () => { renderLeaderboard(); showScreen('leaderboard'); };
+document.getElementById('lbPlayBtn').onclick = () => player.name ? beginRound() : showScreen('entry');
+document.getElementById('lbResetBtn').onclick = () => { Leaderboard.clear(); renderLeaderboard(); };
+el.pauseBtn.onclick = togglePause;
+el.soundBtn.onclick = toggleSound;
+el.inputContact.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitEntry(); });
 
 document.addEventListener('keydown', (e) => {
   if (e.repeat) return;
+  if (e.key === 'Escape') { togglePause(); return; }
   const dir = CONFIG.keyMap[e.key];
   if (dir) { e.preventDefault(); pressDir(dir); }
 });
