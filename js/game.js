@@ -29,7 +29,9 @@ const el = {
   countdown:  document.getElementById('countdown'),
   inputName:  document.getElementById('inputName'),
   inputContact: document.getElementById('inputContact'),
-  entryError: document.getElementById('entryError'),
+  saveError:  document.getElementById('saveError'),
+  saveScore:  document.getElementById('saveScore'),
+  lbRankLine: document.getElementById('lbRankLine'),
   lbList:     document.getElementById('lbList'),
   pauseBtn:   document.getElementById('pauseBtn'),
   soundBtn:   document.getElementById('soundBtn'),
@@ -38,15 +40,16 @@ const el = {
 // Экраны (модалки)
 const screens = {
   intro:       document.getElementById('screenIntro'),
-  entry:       document.getElementById('screenEntry'),
   select:      document.getElementById('screenSelect'),
   result:      document.getElementById('screenResult'),
+  save:        document.getElementById('screenSave'),
   leaderboard: document.getElementById('screenLeaderboard'),
 };
 
 let player = { name: '', contact: '' };
 let paused = false, muted = false, countingDown = false;
 let tutStepIdx = 0, tutArrowIdx = 0, tutMiss = 0; // прогресс туториала
+let pendingResult = null; // итоги последней игры до записи в лидерборд
 
 const DIRS = ['up', 'down', 'left', 'right'];
 const startDist = S / 2 + CONFIG.arrow.size;
@@ -590,10 +593,11 @@ function endGame() {
   const rankLetter = (CONFIG.ranks.find(r => accuracy >= r.min) || CONFIG.ranks[CONFIG.ranks.length - 1]).rank;
   const e = CONFIG.endings.slice().reverse().find(x => state.score >= x.min) || CONFIG.endings[0];
 
-  const sub = Leaderboard.submit({
-    name: player.name, contact: player.contact,
-    score: state.score, maxCombo: state.maxCombo, accuracy, rank: rankLetter,
-  });
+  // итоги пока НЕ пишем в лидерборд — ник/контакт спросим после (аркадная схема)
+  pendingResult = {
+    score: state.score, maxCombo: state.maxCombo,
+    accuracy, perfects: state.perfects, rank: rankLetter, saved: false,
+  };
 
   el.endTitle.textContent = e.title;
   el.endStory.textContent = e.story;
@@ -604,12 +608,58 @@ function endGame() {
     <div class="stat"><b>${state.maxCombo}</b><span>макс. комбо</span></div>
     <div class="stat"><b>${state.perfects}</b><span>perfect</span></div>`;
 
-  // место + «сколько до топа»
-  let line = `Ты сегодня <b>#${sub.rank}</b> из ${sub.total}`;
   const gap = Leaderboard.gapToTop(5, state.score);
-  if (sub.rank > 5 && gap > 0) line += ` · до топ-5 не хватило <b>${gap}</b>`;
-  el.rankLine.innerHTML = line;
+  el.rankLine.innerHTML = gap > 0
+    ? `До топ-5 не хватило <b>${gap}</b> — запиши результат и попробуй ещё`
+    : `Похоже, это место в топ-5! Запиши себя в таблицу.`;
   showScreen('result');
+}
+
+// --- Запись результата в лидерборд (ник + контакт, аркадная схема) ---
+function showSave() {
+  if (!pendingResult) { showSelect(); return; }
+  el.saveScore.innerHTML =
+    `<b>${pendingResult.score}</b> очков · ранг <b>${pendingResult.rank}</b> · ${pendingResult.accuracy}%`;
+  el.inputName.value = player.name || '';
+  el.inputContact.value = '';
+  el.saveError.classList.add('hidden');
+  showScreen('save');
+  setTimeout(() => el.inputName.focus(), 50);
+}
+
+function saveResult() {
+  if (!pendingResult || pendingResult.saved) return;
+  const name = el.inputName.value.trim();
+  const contact = el.inputContact.value.trim();
+  if (name.length < 2) return showSaveError('Введи ник (мин. 2 символа)');
+  if (!isValidContact(contact)) return showSaveError('Укажи email или телефон');
+
+  player = { name, contact };
+  const sub = Leaderboard.submit({
+    name, contact,
+    score: pendingResult.score, maxCombo: pendingResult.maxCombo,
+    accuracy: pendingResult.accuracy, rank: pendingResult.rank,
+  });
+  pendingResult.saved = true;
+  el.saveError.classList.add('hidden');
+
+  let line = `Ты <b>#${sub.rank}</b> из ${sub.total}`;
+  const gap = Leaderboard.gapToTop(5, pendingResult.score);
+  if (sub.rank > 5 && gap > 0) line += ` · до топ-5 не хватило <b>${gap}</b>`;
+  el.lbRankLine.innerHTML = line;
+  renderLeaderboard();
+  showScreen('leaderboard');
+}
+
+function showSaveError(msg) {
+  el.saveError.textContent = msg;
+  el.saveError.classList.remove('hidden');
+}
+
+function isValidContact(v) {
+  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phone = /^\+?[\d\s\-()]{7,}$/;
+  return email.test(v) || phone.test(v);
 }
 
 // --- Пауза / звук ---
@@ -624,42 +674,26 @@ function toggleSound() {
   Sound.setMuted(muted);
 }
 
-// --- Ввод ника + контакта ---
-function submitEntry() {
-  const name = el.inputName.value.trim();
-  const contact = el.inputContact.value.trim();
-  if (name.length < 2) return showEntryError('Введи ник (мин. 2 символа)');
-  if (!isValidContact(contact)) return showEntryError('Укажи email или телефон');
-  player = { name, contact };
-  el.entryError.classList.add('hidden');
-  // первый заход — разминка; потом сразу Select
+// Старт игры из интро: первый раз — разминка, потом сразу Select
+function startPlay() {
   if (localStorage.getItem('dancePromo.seenTutorial')) showSelect();
   else beginTutorial();
 }
-function isValidContact(v) {
-  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const phone = /^\+?[\d\s\-()]{7,}$/;
-  return email.test(v) || phone.test(v);
-}
-function showEntryError(msg) {
-  el.entryError.textContent = msg;
-  el.entryError.classList.remove('hidden');
-}
 
 // --- Слушатели ---
-document.getElementById('toEntryBtn').onclick = () => showScreen('entry');
-document.getElementById('toLbBtn').onclick = () => { renderLeaderboard(); showScreen('leaderboard'); };
-document.getElementById('entryBackBtn').onclick = () => showScreen('intro');
-document.getElementById('startGameBtn').onclick = submitEntry;
+document.getElementById('toPlayBtn').onclick = startPlay;
+document.getElementById('toLbBtn').onclick = () => { el.lbRankLine.innerHTML = ''; renderLeaderboard(); showScreen('leaderboard'); };
 document.getElementById('againBtn').onclick = () => beginRound();
-document.getElementById('toLbAfterBtn').onclick = () => { renderLeaderboard(); showScreen('leaderboard'); };
-document.getElementById('lbPlayBtn').onclick = () => player.name ? showSelect() : showScreen('entry');
+document.getElementById('toSaveBtn').onclick = showSave;
+document.getElementById('saveScoreBtn').onclick = saveResult;
+document.getElementById('skipSaveBtn').onclick = () => { el.lbRankLine.innerHTML = ''; renderLeaderboard(); showScreen('leaderboard'); };
+document.getElementById('lbPlayBtn').onclick = () => showSelect();
 document.getElementById('lbResetBtn').onclick = () => { Leaderboard.clear(); renderLeaderboard(); };
 document.getElementById('toStageBtn').onclick = () => beginRound();
-document.getElementById('selectLbBtn').onclick = () => { renderLeaderboard(); showScreen('leaderboard'); };
+document.getElementById('selectLbBtn').onclick = () => { el.lbRankLine.innerHTML = ''; renderLeaderboard(); showScreen('leaderboard'); };
 el.pauseBtn.onclick = togglePause;
 el.soundBtn.onclick = toggleSound;
-el.inputContact.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitEntry(); });
+el.inputContact.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveResult(); });
 
 document.addEventListener('keydown', (e) => {
   if (e.repeat) return;

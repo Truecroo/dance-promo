@@ -23,7 +23,14 @@ const Leaderboard = (() => {
     list.sort((a, b) => b.score - a.score || b.maxCombo - a.maxCombo);
     const rank = list.indexOf(rec) + 1;
     persist(list.slice(0, MAX));
-    return { rank, total: list.length };
+    return { rank, total: list.length, id: rec.ts };
+  }
+
+  // Дозаписать контакт к ранее сохранённой записи (лид после лидерборда)
+  function setContact(id, contact) {
+    const list = load();
+    const rec = list.find(r => r.ts === id);
+    if (rec) { rec.contact = contact; persist(list); }
   }
 
   function top(n = 10) {
@@ -40,5 +47,5 @@ const Leaderboard = (() => {
 
   function clear() { persist([]); }
 
-  return { submit, top, clear, gapToTop };
+  return { submit, setContact, top, clear, gapToTop };
 })();

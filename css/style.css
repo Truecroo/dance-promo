@@ -315,7 +315,17 @@ html, body {
 #rankLine { font-size: 15px; color: var(--muted); margin-bottom: 22px; }
 #rankLine b { color: var(--accent); font-size: 18px; }
 
+/* Запись результата */
+.saveScore {
+  font-size: 16px; color: var(--muted);
+  margin-bottom: 18px; padding: 10px 0;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.saveScore b { color: var(--text); }
+
 /* Лидерборд */
+#lbRankLine { font-size: 15px; color: var(--muted); margin-bottom: 14px; }
+#lbRankLine b { color: var(--accent); }
 .lbList { list-style: none; text-align: left; margin: 0 0 20px; padding: 0; max-height: 46vh; overflow-y: auto; }
 .lbRow {
   display: flex; align-items: center; gap: 12px;
