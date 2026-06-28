@@ -736,6 +736,10 @@ document.querySelectorAll('.dirBtn').forEach(btn => {
   btn.addEventListener('mousedown', fire);
 });
 
+// Брендинг/CTA из конфига
+document.getElementById('qrCaption').textContent = CONFIG.branding.qrCaption;
+document.getElementById('ctaLine').textContent = CONFIG.branding.cta;
+
 preloadDancer();
 updateDancer();
 requestAnimationFrame(animateDancer);

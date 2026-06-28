@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Dance Promo</title>
-  <link rel="stylesheet" href="css/style.css?v=15" />
+  <link rel="stylesheet" href="css/style.css?v=16" />
 </head>
 <body>
   <div id="energy"></div> <!-- реактивный фон танцпола -->
@@ -61,6 +61,10 @@
           Чем длиннее комбо — тем круче танцует герой. Попади в топ!</p>
         <button id="toPlayBtn" class="bigBtn">Играть</button>
         <button id="toLbBtn" class="ghostBtn">🏆 Таблица лидеров</button>
+        <div id="qrBlock">
+          <img id="qrImg" src="assets/qr.png?v=16" alt="QR" />
+          <span id="qrCaption"></span>
+        </div>
       </div>
 
       <!-- Select (вход в зачётный режим) -->
@@ -104,6 +108,7 @@
         <h1>Таблица лидеров</h1>
         <div id="lbRankLine"></div>
         <ol id="lbList" class="lbList"></ol>
+        <div id="ctaLine" class="ctaLine"></div>
         <button id="lbPlayBtn" class="bigBtn">Играть ещё</button>
         <button id="lbResetBtn" class="ghostBtn">Очистить</button>
       </div>
@@ -111,9 +116,9 @@
     </div>
   </div>
 
-  <script src="js/config.js?v=15"></script>
-  <script src="js/audio.js?v=15"></script>
-  <script src="js/leaderboard.js?v=15"></script>
-  <script src="js/game.js?v=15"></script>
+  <script src="js/config.js?v=16"></script>
+  <script src="js/audio.js?v=16"></script>
+  <script src="js/leaderboard.js?v=16"></script>
+  <script src="js/game.js?v=16"></script>
 </body>
 </html>

@@ -407,6 +407,26 @@ body.fever #stage::after {
   margin-bottom: 14px;
 }
 
+/* QR на интро */
+#qrBlock { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+#qrImg {
+  width: 116px; height: 116px;
+  border-radius: 12px;
+  background: #fff; padding: 8px;
+}
+#qrCaption { font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+
+/* CTA на лидерборде */
+.ctaLine {
+  font-size: 13px; line-height: 1.4;
+  color: var(--text);
+  background: rgba(255,209,102,0.12);
+  border: 1px solid rgba(255,209,102,0.4);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
 .hidden { display: none; }
 
 /* Анимации */
