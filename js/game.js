@@ -112,10 +112,12 @@ state = freshState();
 effects = { pulses: [], particles: [], shake: 0 };
 
 // --- Спавн ---
-function spawnArrow(exclude) {
+function spawnArrow(exclude, type = 'tap') {
   let dir;
   do { dir = DIRS[Math.floor(Math.random() * DIRS.length)]; } while (dir === exclude);
-  state.arrows.push({ dir, d: startDist, hit: false, dead: false });
+  const a = { dir, d: startDist, hit: false, dead: false, type };
+  if (type === 'hold') { a.len = CONFIG.notes.holdLen; a.holding = false; }
+  state.arrows.push(a);
   return dir;
 }
 
@@ -127,10 +129,16 @@ function onHalfBeat(idx, now) {
   const frac = (now - state.startTime) / CONFIG.trackDuration;
   const phase = CONFIG.beat.phases.find(p => frac < p.until) || CONFIG.beat.phases[CONFIG.beat.phases.length - 1];
 
-  if (idx % phase.everyHalfBeats === 0) {
+  if (idx % phase.everyHalfBeats !== 0) return;
+
+  const r = Math.random();
+  if (phase.freezeChance && r < phase.freezeChance) {
+    spawnArrow(null, 'freeze');
+  } else if (phase.holdChance && r < (phase.freezeChance || 0) + phase.holdChance) {
+    spawnArrow(null, 'hold');
+  } else {
     const d = spawnArrow();
-    // финальная фаза — иногда вторая стрелка с другой стороны
-    if (phase.doubles && Math.random() < 0.35) spawnArrow(d);
+    if (phase.doubles && Math.random() < 0.35) spawnArrow(d); // двойная нота
   }
 }
 
@@ -148,18 +156,97 @@ function pressDir(dir) {
   flashButton(dir);
   if (!state.running || paused || countingDown) return;
   const R = CONFIG.target.radius;
+
+  // freeze: любое нажатие, пока «замри» в кольце — провал
+  for (const a of state.arrows) {
+    if (a.type === 'freeze' && !a.dead && Math.abs(a.d - R) <= CONFIG.hitWindow) {
+      freezeFail(a);
+      return;
+    }
+  }
+
+  // ближайшая нота нужного направления в окне
   let best = null, bestErr = Infinity;
   for (const a of state.arrows) {
-    if (a.dir !== dir || a.hit || a.dead) continue;
+    if (a.dir !== dir || a.hit || a.dead || a.type === 'freeze') continue;
     const err = Math.abs(a.d - R);
     if (err <= CONFIG.hitWindow && err < bestErr) { best = a; bestErr = err; }
   }
-  if (best) {
-    best.hit = true; best.dead = true;
-    const signed = best.d - CONFIG.target.radius;
-    if (state.mode === 'tutorial') tutorialHit(best, bestErr, signed);
-    else registerHit(best, bestErr, signed);
+  if (!best) return;
+  const signed = best.d - CONFIG.target.radius;
+
+  if (best.type === 'hold') { startHold(best, bestErr, signed); return; }
+
+  best.hit = true; best.dead = true;
+  if (state.mode === 'tutorial') tutorialHit(best, bestErr, signed);
+  else registerHit(best, bestErr, signed);
+}
+
+// Отпускание кнопки — для hold-нот
+function releaseDir(dir) {
+  if (!state.running) return;
+  const R = CONFIG.target.radius;
+  for (const a of state.arrows) {
+    if (a.type === 'hold' && a.holding && !a.dead && a.dir === dir) {
+      // хвост дошёл до кольца (с допуском) — успех, иначе ранний срыв
+      if (a.d <= R - a.len + CONFIG.hitWindow) holdSuccess(a);
+      else holdBreak(a);
+    }
   }
+}
+
+function startHold(arrow) {
+  arrow.holding = true;
+  arrow.hit = true;
+  showJudgment('good', 'HOLD ✊');
+  Sound.hit();
+}
+function holdSuccess(arrow) {
+  arrow.dead = true;
+  state.combo += 1; state.hits += 1; state.perfects += 1;
+  state.maxCombo = Math.max(state.maxCombo, state.combo);
+  const tier = CONFIG.scoreTiers.find(t => state.combo <= t.combo);
+  const mult = (state.fever ? CONFIG.hype.feverMult : 1) * (state.slump ? CONFIG.hype.slumpMult : 1);
+  const pts = Math.round(tier.points * CONFIG.notes.holdBonus * mult);
+  state.score += pts;
+  const p = arrowPos({ dir: arrow.dir, d: CONFIG.target.radius });
+  effects.pulses.push({ color: CONFIG.dirColors[arrow.dir], t: 0 });
+  spawnParticles(p.x, p.y, CONFIG.dirColors[arrow.dir], 12);
+  showJudgment('perfect', 'HOLD ✓');
+  spawnFloater('+' + pts, '#6effb0', p.x, p.y);
+  addHype(CONFIG.timing.perfect.gain);
+  Sound.perfect();
+  updateHud(); updateDancer();
+}
+function holdBreak(arrow) {
+  arrow.dead = true;
+  state.combo = 0; state.misses += 1;
+  showJudgment('miss', 'СОРВАЛ');
+  addHype(-CONFIG.hype.missCost);
+  Sound.miss();
+  updateHud(); setDancerMood('miss');
+  setTimeout(() => { if (state.running && !state.slump && !state.fever) updateDancer(); }, 400);
+}
+
+// freeze: успех (выдержал) / провал (нажал)
+function freezeSuccess(arrow) {
+  arrow.dead = true;
+  state.combo += 1; state.hits += 1;
+  state.maxCombo = Math.max(state.maxCombo, state.combo);
+  const p = { x: CX, y: CY };
+  showJudgment('early', 'ЗАМЕР ✋');
+  spawnFloater('+хайп', '#4ad6ff', CX, CY - 30);
+  addHype(CONFIG.notes.freezeGain);
+  updateHud(); updateDancer();
+}
+function freezeFail(arrow) {
+  arrow.dead = true;
+  state.combo = 0; state.misses += 1;
+  showJudgment('miss', 'НЕ ЖМИ!');
+  addHype(-CONFIG.notes.freezeCost);
+  Sound.miss();
+  updateHud(); setDancerMood('miss');
+  setTimeout(() => { if (state.running && !state.slump && !state.fever) updateDancer(); }, 400);
 }
 
 // Оценка тайминга: класс (perfect/good/early/late) + параметры из конфига
@@ -379,10 +466,43 @@ function render(dt) {
   drawTargets();
   for (const a of state.arrows) {
     if (a.dead) continue;
+    if (a.type === 'freeze') { drawFreeze(a); continue; }
+    if (a.type === 'hold') drawHoldTail(a);
     const p = arrowPos(a);
     drawArrowGlyph(p.x, p.y, a.dir, CONFIG.dirColors[a.dir], 1);
   }
   drawEffects(dt);
+}
+
+// Хвост hold-ноты: толстая линия от головы наружу по радиусу
+function drawHoldTail(a) {
+  const head = arrowPos(a);
+  const tail = arrowPos({ dir: a.dir, d: a.d + a.len });
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 16;
+  ctx.strokeStyle = a.holding ? '#6effb0' : CONFIG.dirColors[a.dir];
+  ctx.globalAlpha = a.holding ? 0.9 : 0.5;
+  ctx.beginPath();
+  ctx.moveTo(head.x, head.y);
+  ctx.lineTo(tail.x, tail.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Freeze-нота: круг со «стоп»-полосами
+function drawFreeze(a) {
+  const p = arrowPos(a);
+  const s = CONFIG.arrow.size * 0.5;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.fillStyle = '#fff';
+  ctx.globalAlpha = 0.95;
+  ctx.beginPath(); ctx.arc(0, 0, s, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#101016';
+  ctx.fillRect(-s * 0.42, -s * 0.45, s * 0.34, s * 0.9);
+  ctx.fillRect(s * 0.08, -s * 0.45, s * 0.34, s * 0.9);
+  ctx.restore();
 }
 
 // --- Тряска ---
@@ -426,7 +546,12 @@ function loop(now) {
   for (const a of state.arrows) {
     if (a.dead) continue;
     a.d -= speed * dt;
-    if (a.d < R - CONFIG.hitWindow) {
+    if (a.type === 'freeze') {
+      if (a.d < R - CONFIG.hitWindow) freezeSuccess(a); // прошла без нажатия — выдержал
+    } else if (a.type === 'hold') {
+      if (a.holding) { if (a.d <= R - a.len) holdSuccess(a); }       // удержал до конца
+      else if (a.d < R - CONFIG.hitWindow) { a.dead = true; registerMiss(); } // не начал
+    } else if (a.d < R - CONFIG.hitWindow) {
       a.dead = true;
       tut ? tutorialMiss(a) : registerMiss();
     }
@@ -728,12 +853,19 @@ document.addEventListener('keydown', (e) => {
   const dir = CONFIG.keyMap[e.key];
   if (dir) { e.preventDefault(); pressDir(dir); }
 });
+document.addEventListener('keyup', (e) => {
+  const dir = CONFIG.keyMap[e.key];
+  if (dir) releaseDir(dir);
+});
 
 document.querySelectorAll('.dirBtn').forEach(btn => {
   const dir = btn.dataset.dir;
-  const fire = (ev) => { ev.preventDefault(); pressDir(dir); };
-  btn.addEventListener('touchstart', fire, { passive: false });
-  btn.addEventListener('mousedown', fire);
+  const press = (ev) => { ev.preventDefault(); pressDir(dir); };
+  const release = (ev) => { ev.preventDefault(); releaseDir(dir); };
+  btn.addEventListener('touchstart', press, { passive: false });
+  btn.addEventListener('touchend', release, { passive: false });
+  btn.addEventListener('mousedown', press);
+  btn.addEventListener('mouseup', release);
 });
 
 // Брендинг/CTA из конфига

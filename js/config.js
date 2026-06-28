@@ -21,12 +21,21 @@ const CONFIG = {
     bpm: 120,
     // Плотность спавна по фазам трека (доля времени 0..1 -> сколько долей на спавн).
     // every: 2 — спавн на каждый 2-й полубит; 1 — каждый полубит (плотно).
+    // holdChance/freezeChance — вероятность спецноты вместо обычной в этой фазе
     phases: [
-      { until: 0.25, everyHalfBeats: 4 }, // разогрев — редко
-      { until: 0.55, everyHalfBeats: 2 }, // на каждый бит
-      { until: 0.85, everyHalfBeats: 1 }, // + офф-биты
-      { until: 1.01, everyHalfBeats: 1, doubles: true }, // финал — гуще
+      { until: 0.25, everyHalfBeats: 4 }, // разогрев — редко, только тапы
+      { until: 0.55, everyHalfBeats: 2, holdChance: 0.12 }, // на каждый бит + холды
+      { until: 0.85, everyHalfBeats: 1, holdChance: 0.16, freezeChance: 0.12 }, // + офф-биты, фризы
+      { until: 1.01, everyHalfBeats: 1, doubles: true, holdChance: 0.18, freezeChance: 0.14 }, // финал
     ],
+  },
+
+  // Типы нот
+  notes: {
+    holdLen: 110,      // длина «хвоста» hold-ноты (px)
+    holdBonus: 2.0,    // множитель очков за успешный hold
+    freezeGain: 6,     // прирост хайпа за успешный freeze (замер)
+    freezeCost: 16,    // штраф хайпа за нажатие во время freeze
   },
 
   // Hype (кураж толпы). Без жёсткого провала: на 0 — «провал куража» (slump),
