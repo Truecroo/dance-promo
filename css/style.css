@@ -82,6 +82,20 @@ html, body {
   transition: width .18s ease, background .3s ease;
 }
 #energyBar.low { background: linear-gradient(90deg, #ff6b6b, #ffa14a); }
+#energyBar.fever { background: linear-gradient(90deg, #ffd166, #ff7ab0); box-shadow: 0 0 12px rgba(255,209,102,.8); }
+
+/* Fever Mode — ярче танцпол, золотой акцент */
+body.fever #energy { filter: brightness(1.45) saturate(1.35); }
+body.fever #comboBox b { color: #ffd166; text-shadow: 0 0 26px rgba(255,209,102,.9); }
+body.fever #dancer { filter: drop-shadow(0 0 26px rgba(255,209,102,.85)); }
+body.fever #stage::after {
+  content: ''; position: absolute; inset: -6%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,209,102,.16), transparent 65%);
+  pointer-events: none; z-index: 0;
+  animation: feverPulse .6s ease-in-out infinite;
+}
+@keyframes feverPulse { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
 
 /* Туториал-подсказка */
 #tutHint {

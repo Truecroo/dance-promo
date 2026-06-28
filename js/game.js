@@ -102,6 +102,7 @@ function freshState() {
     running: false, score: 0, combo: 0, maxCombo: 0,
     hits: 0, perfects: 0, misses: 0,
     hype: CONFIG.hype.start, slump: false,
+    fever: false, feverEnd: 0,
     mode: 'game', // 'game' | 'tutorial'
     arrows: [], startTime: 0, lastFrame: 0,
     nextHalfBeat: 0, halfBeatIdx: 0,
@@ -180,8 +181,8 @@ function registerHit(arrow, err, signed) {
   state.maxCombo = Math.max(state.maxCombo, state.combo);
 
   const tier = CONFIG.scoreTiers.find(t => state.combo <= t.combo);
-  const slumpMult = state.slump ? CONFIG.hype.slumpMult : 1;
-  const pts = Math.round(tier.points * j.t.mult * slumpMult);
+  const mult = (state.slump ? CONFIG.hype.slumpMult : 1) * (state.fever ? CONFIG.hype.feverMult : 1);
+  const pts = Math.round(tier.points * j.t.mult * mult);
   state.score += pts;
 
   const color = CONFIG.dirColors[arrow.dir];
@@ -210,7 +211,7 @@ function registerMiss() {
   setTimeout(() => { if (state.running && !state.slump) updateDancer(); }, 400);
 }
 
-// --- Hype (soft-fail, без гейм-овера) ---
+// --- Hype (soft-fail + Fever) ---
 function addHype(delta) {
   state.hype = Math.max(0, Math.min(CONFIG.hype.max, state.hype + delta));
   if (!state.slump && state.hype <= 0) {
@@ -221,12 +222,32 @@ function addHype(delta) {
     state.slump = false;
     updateDancer();
   }
+  // запуск Fever на максимуме хайпа
+  if (!state.fever && !state.slump && state.hype >= CONFIG.hype.feverAt) startFever();
   updateHypeBar();
 }
 function updateHypeBar() {
   const pct = state.hype / CONFIG.hype.max * 100;
   el.energyBar.style.width = pct + '%';
   el.energyBar.classList.toggle('low', state.slump || pct <= 30);
+  el.energyBar.classList.toggle('fever', state.fever);
+}
+
+function startFever() {
+  state.fever = true;
+  state.feverEnd = performance.now() + CONFIG.hype.feverMs;
+  document.body.classList.add('fever');
+  root.style.setProperty('--energy', '1');
+  showJudgment('perfect', 'FEVER! ×2');
+  setDancerMood('star');
+  effects.shake = 10;
+}
+function endFever() {
+  state.fever = false;
+  state.hype = CONFIG.hype.feverResetHype;
+  document.body.classList.remove('fever');
+  updateDancer();
+  updateHypeBar();
 }
 
 // --- HUD / танцор ---
@@ -246,6 +267,7 @@ function updateHud() {
 }
 
 function updateDancer() {
+  if (state && state.fever) { setDancerMood('star'); return; }
   if (state && state.slump) { setDancerMood('miss'); return; }
   let mood = 'idle';
   for (const m of CONFIG.moods) if (state.combo >= m.combo) mood = m.mood;
@@ -387,6 +409,8 @@ function loop(now) {
   state.lastFrame = now;
   const tut = state.mode === 'tutorial';
 
+  if (state.fever && now >= state.feverEnd) endFever();
+
   // бит-планировщик (только в зачётном режиме)
   if (!tut) {
     const halfBeatMs = 30000 / CONFIG.beat.bpm;
@@ -451,6 +475,7 @@ function escapeHtml(s) {
 function beginRound() {
   showScreen(null);
   el.gameRoot.classList.remove('tutorial');
+  document.body.classList.remove('fever');
   state = freshState();
   effects = { pulses: [], particles: [], shake: 0 };
   paused = false;
@@ -584,6 +609,8 @@ function runCountdown(done) {
 function endGame() {
   state.running = false;
   paused = false;
+  state.fever = false;
+  document.body.classList.remove('fever');
   root.style.setProperty('--energy', '0');
   root.style.setProperty('--shake', '0px');
   setDancerMood('idle');

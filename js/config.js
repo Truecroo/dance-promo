@@ -31,7 +31,10 @@ const CONFIG = {
     missCost: 14, gain: 4, perfectGain: 7,
     slumpMult: 0.5,   // множитель очков во время slump
     recoverAt: 30,    // хайп, при котором выходим из slump
-    feverAt: 100,     // (для Фазы 3c) хайп для Fever Mode
+    feverAt: 100,     // хайп для запуска Fever Mode
+    feverMs: 8000,    // длительность Fever Mode
+    feverMult: 2,     // множитель очков в Fever
+    feverResetHype: 45, // хайп после окончания Fever (чтобы не зациклить)
   },
 
   // Тайминг-оценки попадания (по |d - radius|, в порядке от точного к грубому)
