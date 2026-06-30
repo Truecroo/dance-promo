@@ -112,17 +112,18 @@ state = freshState();
 effects = { pulses: [], particles: [], shake: 0 };
 
 // --- Спавн ---
-// Не занимаем дорожку, где нота ещё близко к точке появления — иначе наложение.
+// По всем дорожкам можно и тап, и холд. Блокируем дорожку, только если у точки
+// появления ещё есть нота (а у hold — её ХВОСТ), иначе новая нота наложится.
 function spawnArrow(exclude, type = 'tap') {
-  const minGap = CONFIG.arrow.size * 2.2 + (type === 'hold' ? CONFIG.notes.holdLen : 0);
+  const minGap = CONFIG.arrow.size * 1.4; // только чтобы ноты не перекрывались
   const busy = new Set();
   for (const a of state.arrows) {
     if (a.dead) continue;
-    const span = a.type === 'hold' ? a.d + a.len : a.d; // у hold учитываем хвост
-    if (span > startDist - minGap) busy.add(a.dir);
+    const outerEdge = a.type === 'hold' ? a.d + a.len : a.d; // внешний край ноты (для hold — конец хвоста)
+    if (outerEdge > startDist - minGap) busy.add(a.dir);
   }
   const avail = DIRS.filter(d => d !== exclude && !busy.has(d));
-  if (!avail.length) return null; // все дорожки заняты — пропускаем такт
+  if (!avail.length) return null; // занятые дорожки — пропускаем этот спавн
   const dir = avail[Math.floor(Math.random() * avail.length)];
   const a = { dir, d: startDist, hit: false, dead: false, type };
   if (type === 'hold') { a.len = CONFIG.notes.holdLen; a.holding = false; }

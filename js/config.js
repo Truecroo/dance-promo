@@ -23,10 +23,10 @@ const CONFIG = {
     // every: 2 — спавн на каждый 2-й полубит; 1 — каждый полубит (плотно).
     // holdChance — вероятность hold-ноты вместо обычной в этой фазе
     phases: [
-      { until: 0.30, everyHalfBeats: 4 }, // разогрев — каждые 2 бита
-      { until: 0.60, everyHalfBeats: 2, holdChance: 0.12 }, // на каждый бит + холды
-      { until: 0.85, everyHalfBeats: 2, holdChance: 0.16 }, // + холды чаще
-      { until: 1.01, everyHalfBeats: 1, holdChance: 0.16 }, // финал — офф-биты
+      { until: 0.25, everyHalfBeats: 4 }, // разогрев — каждые 2 бита
+      { until: 0.55, everyHalfBeats: 2, holdChance: 0.12 }, // на каждый бит + холды
+      { until: 0.85, everyHalfBeats: 1, holdChance: 0.15 }, // + офф-биты
+      { until: 1.01, everyHalfBeats: 1, holdChance: 0.15 }, // финал — плотно
     ],
   },
 
