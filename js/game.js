@@ -50,6 +50,7 @@ let player = { name: '', contact: '' };
 let paused = false, muted = false, countingDown = false;
 let tutStepIdx = 0, tutArrowIdx = 0, tutMiss = 0; // прогресс туториала
 let pendingResult = null; // итоги последней игры до записи в лидерборд
+let lastScore = -1;       // очки последней записи (для подсветки себя в таблице)
 
 const DIRS = ['up', 'down', 'left', 'right'];
 const startDist = S / 2 + CONFIG.arrow.size;
@@ -533,14 +534,19 @@ function showScreen(name) {
   el.overlay.classList.toggle('hidden', !name);
 }
 
-function renderLeaderboard() {
-  const list = Leaderboard.top(10);
+async function renderLeaderboard() {
+  el.lbList.innerHTML = '<li class="lbEmpty">Загрузка…</li>';
+  let list;
+  try { list = await Leaderboard.top(10); }
+  catch { el.lbList.innerHTML = '<li class="lbEmpty">Не удалось загрузить таблицу</li>'; return; }
   if (!list.length) {
     el.lbList.innerHTML = '<li class="lbEmpty">Пока пусто — будь первым!</li>';
     return;
   }
+  let shownMe = false;
   el.lbList.innerHTML = list.map((r, i) => {
-    const me = (r.name === player.name && r.contact === player.contact) ? ' me' : '';
+    const me = !shownMe && r.name === player.name && r.score === lastScore ? ' me' : '';
+    if (me) shownMe = true;
     return `<li class="lbRow${me}">
       <span class="lbPos">${i + 1}</span>
       <span class="lbName">${escapeHtml(r.name)}</span>
@@ -718,10 +724,7 @@ function endGame() {
     <div class="stat"><b>${state.maxCombo}</b><span>макс. комбо</span></div>
     <div class="stat"><b>${state.perfects}</b><span>perfect</span></div>`;
 
-  const gap = Leaderboard.gapToTop(5, state.score);
-  el.rankLine.innerHTML = gap > 0
-    ? `До топ-5 не хватило <b>${gap}</b> — запиши результат и попробуй ещё`
-    : `Похоже, это место в топ-5! Запиши себя в таблицу.`;
+  el.rankLine.innerHTML = `Запиши результат — и узнай своё место в топе`;
   showScreen('result');
 }
 
@@ -737,7 +740,7 @@ function showSave() {
   setTimeout(() => el.inputName.focus(), 50);
 }
 
-function saveResult() {
+async function saveResult() {
   if (!pendingResult || pendingResult.saved) return;
   const name = el.inputName.value.trim();
   const contact = el.inputContact.value.trim();
@@ -745,20 +748,32 @@ function saveResult() {
   if (!isValidContact(contact)) return showSaveError('Укажи email или телефон');
 
   player = { name, contact };
-  const sub = Leaderboard.submit({
-    name, contact,
-    score: pendingResult.score, maxCombo: pendingResult.maxCombo,
-    accuracy: pendingResult.accuracy, rank: pendingResult.rank,
-  });
+  lastScore = pendingResult.score;
   pendingResult.saved = true;
   el.saveError.classList.add('hidden');
 
-  let line = `Ты <b>#${sub.rank}</b> из ${sub.total}`;
-  const gap = Leaderboard.gapToTop(5, pendingResult.score);
-  if (sub.rank > 5 && gap > 0) line += ` · до топ-5 не хватило <b>${gap}</b>`;
-  el.lbRankLine.innerHTML = line;
+  const btn = document.getElementById('saveScoreBtn');
+  btn.disabled = true; btn.textContent = 'Сохраняем…';
+  el.lbRankLine.innerHTML = '';
   renderLeaderboard();
   showScreen('leaderboard');
+
+  try {
+    const sub = await Leaderboard.submit({
+      name, contact,
+      score: pendingResult.score, maxCombo: pendingResult.maxCombo,
+      accuracy: pendingResult.accuracy, rank: pendingResult.rank,
+    });
+    let line = `Ты <b>#${sub.rank}</b> из ${sub.total}`;
+    const gap = await Leaderboard.gapToTop(5, pendingResult.score);
+    if (sub.rank > 5 && gap > 0) line += ` · до топ-5 не хватило <b>${gap}</b>`;
+    el.lbRankLine.innerHTML = line;
+    renderLeaderboard();
+  } catch {
+    el.lbRankLine.innerHTML = 'Результат сохранён, но таблица недоступна';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Сохранить';
+  }
 }
 
 function showSaveError(msg) {
@@ -829,6 +844,8 @@ document.querySelectorAll('.dirBtn').forEach(btn => {
 // Брендинг/CTA из конфига
 document.getElementById('qrCaption').textContent = CONFIG.branding.qrCaption;
 document.getElementById('ctaLine').textContent = CONFIG.branding.cta;
+// «Очистить» доступно только в локальном режиме
+if (Leaderboard.remote) document.getElementById('lbResetBtn').classList.add('hidden');
 
 preloadDancer();
 updateDancer();
